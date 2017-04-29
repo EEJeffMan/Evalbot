@@ -33,6 +33,9 @@
 #include "sound_task.h"
 #include "sounds.h"
 
+#include "driverlib/gpio.h"
+#include "inc/hw_memmap.h"
+
 //****************************************************************************
 //
 // Define the minimum driving duration time, and the allowed random variation,
@@ -59,6 +62,9 @@
 #define AUTO_FORWARD_SPEED  40
 #define AUTO_TURN_SPEED     25
 
+unsigned char read_xbee();
+void update_motors(unsigned char state);
+
 //****************************************************************************
 //
 // Define the possible states for the EVALBOT autonomous state machine
@@ -67,8 +73,9 @@
 typedef enum
 {
     EVALBOT_STATE_IDLE,
-    EVALBOT_STATE_DRIVING,
-    EVALBOT_STATE_TURNING,
+	EVALBOT_STATE_ACTIVE,
+//    EVALBOT_STATE_DRIVING,
+//    EVALBOT_STATE_TURNING,
 } tEvalbotState;
 
 //****************************************************************************
@@ -82,13 +89,81 @@ void
 AutoTask(void *pvParam)
 {
     static tEvalbotState sState = EVALBOT_STATE_IDLE;
-    static unsigned long ulLastTicks = 0;
-    static unsigned long ulDurationTicks = 0;
+//    static unsigned long ulLastTicks = 0;
+//    static unsigned long ulDurationTicks = 0;
+    unsigned char drive_state = 0;
+//    unsigned char gpio_input = 0;
+
+    /*
+     * States:
+     *
+     * 	Idle
+     * 		If button 1 pressed, go to active state
+     *
+     * 	Active
+     * 		If button 2 pressed, go to idle state
+     * 		Read joystick data
+     * 		Update motors
+     *
+     */
+
+    switch(sState)
+    {
+    case EVALBOT_STATE_IDLE:
+        //
+        // IDLE - in this state, the EVALBOT is waiting for a press of
+        // button 1, which will start the motion.
+        //
+
+		//
+		// Check for press of button 1
+		//
+		if(!PushButtonGetStatus(BUTTON_1))
+		{
+			//DriveRun(MOTOR_DRIVE_FORWARD, AUTO_FORWARD_SPEED);
+			sState = EVALBOT_STATE_ACTIVE;//DRIVING;
+			UARTprintf("button 1 - driving\n");
+		}
+    	break;
+
+    case EVALBOT_STATE_ACTIVE:
+
+		if(!PushButtonGetStatus(BUTTON_2))
+		{
+			DriveRun(MOTOR_DRIVE_FORWARD, 0);
+			DriveStop();
+
+			//
+			// Update the state machine and notify action via serial port
+			//
+			sState = EVALBOT_STATE_IDLE;
+			UARTprintf("button 2 - stopping\n");
+		}
+		else
+		{
+			// TODO: Read data from joystick
+			drive_state = read_xbee();
+
+			UARTprintf("Joystick %c\n", drive_state);
+
+			//gpio_input = GPIOPinRead(GPIO_PORTJ_BASE, GPIO_PIN_4 | GPIO_PIN_5 | GPIO_PIN_6 | GPIO_PIN_7);
+			//UARTprintf("GPIO %u\n", gpio_input);
+
+			// TODO: Update Motor drives
+			update_motors(drive_state);
+		}
+    	break;
+
+    default:
+
+    	break;
+    }
+
 
     //
     // Process according to the current state
     //
-    switch(sState)
+/*    switch(sState)
     {
         //
         // IDLE - in this state, the EVALBOT is waiting for a press of
@@ -291,7 +366,35 @@ AutoTask(void *pvParam)
             //
             break;
         }
-    }
+    }*/
+}
+
+unsigned char read_xbee()
+{
+	//
+	//unsigned char data;
+	//unsigned int state;
+
+	return UARTgetc();
+
+	//return data;
+	//return UARTgetc();
+}
+
+void update_motors(unsigned char state)
+{
+	//
+	if(state == MOTOR_DRIVE_STOP)
+	{
+		DriveRun(MOTOR_DRIVE_FORWARD, 0);
+		DriveStop();
+	}
+	else
+	{
+		DriveRun(state, AUTO_FORWARD_SPEED);
+	}
+
+	//DriveRun(MOTOR_DRIVE_FORWARD, AUTO_FORWARD_SPEED);
 }
 
 //****************************************************************************

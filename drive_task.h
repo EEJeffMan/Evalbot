@@ -49,10 +49,16 @@ extern "C"
 // Defines the directions for commanding the motor drive.
 //
 //*****************************************************************************
-#define MOTOR_DRIVE_TURN_LEFT 0
-#define MOTOR_DRIVE_TURN_RIGHT 1
-#define MOTOR_DRIVE_FORWARD 3
-#define MOTOR_DRIVE_REVERSE 4
+#define MOTOR_DRIVE_TURN_LEFT 		1
+#define MOTOR_DRIVE_TURN_RIGHT 		2
+#define MOTOR_DRIVE_FORWARD 		8
+#define MOTOR_DRIVE_REVERSE 		4
+
+#define MOTOR_DRIVE_FORWARD_LEFT	9
+#define MOTOR_DRIVE_FORWARD_RIGHT	10
+#define MOTOR_DRIVE_REVERSE_LEFT	5
+#define MOTOR_DRIVE_REVERSE_RIGHT	6
+#define MOTOR_DRIVE_STOP			0
 
 //*****************************************************************************
 //

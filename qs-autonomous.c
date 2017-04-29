@@ -37,6 +37,8 @@
 #include "sound_task.h"
 #include "auto_task.h"
 
+#include "driverlib/rom_map.h"
+
 //*****************************************************************************
 //
 //! \addtogroup example_list
@@ -131,10 +133,14 @@ main (void)
     ROM_SysCtlPeripheralEnable(SYSCTL_PERIPH_UART0);
     ROM_GPIOPinTypeUART(GPIO_PORTA_BASE, GPIO_PIN_0 | GPIO_PIN_1);
 
+    // Configure Xbee inputs: PJ4-7
+//    ROM_GPIOPinTypeGPIOInput(GPIO_PORTJ_BASE, GPIO_PIN_4 | GPIO_PIN_5 | GPIO_PIN_6 | GPIO_PIN_7);
+
     //
     // Initialize the UART standard I/O.
     //
-    UARTStdioInit(0);
+    //UARTStdioInit(0);
+    UARTStdioConfig(0, 9600, MAP_SysCtlClockGet());
     UARTprintf("EVALBOT starting\n");
 
     //

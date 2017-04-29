@@ -50,6 +50,8 @@
 #define MAX_WHEEL_RPM   100
 #define MIN_WHEEL_RPM   5
 
+#define TURN_FACTOR		2
+
 //****************************************************************************
 //
 // These variables hold constants that are used in speed calculations, that
@@ -390,13 +392,18 @@ DriveStop(void)
 void
 DriveRun(unsigned long ulDirection, unsigned long ulSpeed)
 {
+	unsigned long ulSpeed_LEFT, ulSpeed_RIGHT;
     //
     // Validate the inputs
     //
     if(((ulDirection != MOTOR_DRIVE_REVERSE) &&
         (ulDirection != MOTOR_DRIVE_FORWARD) &&
         (ulDirection != MOTOR_DRIVE_TURN_LEFT) &&
-        (ulDirection != MOTOR_DRIVE_TURN_RIGHT)) ||
+        (ulDirection != MOTOR_DRIVE_TURN_RIGHT) &&
+        (ulDirection != MOTOR_DRIVE_FORWARD_LEFT) &&
+        (ulDirection != MOTOR_DRIVE_FORWARD_RIGHT) &&
+        (ulDirection != MOTOR_DRIVE_REVERSE_LEFT) &&
+        (ulDirection != MOTOR_DRIVE_REVERSE_RIGHT)) ||
        (ulSpeed > MAX_WHEEL_RPM))
     {
         return;
@@ -414,6 +421,11 @@ DriveRun(unsigned long ulDirection, unsigned long ulSpeed)
         {
             g_sMotorDrives[MOTOR_DRIVE_LEFT].bReverse = 1;
             g_sMotorDrives[MOTOR_DRIVE_RIGHT].bReverse = 0;
+
+            ulSpeed_LEFT = ulSpeed;
+            ulSpeed_RIGHT = ulSpeed;
+
+
             break;
         }
 
@@ -424,6 +436,9 @@ DriveRun(unsigned long ulDirection, unsigned long ulSpeed)
         {
             g_sMotorDrives[MOTOR_DRIVE_LEFT].bReverse = 0;
             g_sMotorDrives[MOTOR_DRIVE_RIGHT].bReverse = 1;
+
+            ulSpeed_LEFT = ulSpeed;
+            ulSpeed_RIGHT = ulSpeed;
             break;
         }
 
@@ -434,6 +449,9 @@ DriveRun(unsigned long ulDirection, unsigned long ulSpeed)
         {
             g_sMotorDrives[MOTOR_DRIVE_LEFT].bReverse = 0;
             g_sMotorDrives[MOTOR_DRIVE_RIGHT].bReverse = 0;
+
+            ulSpeed_LEFT = ulSpeed;
+            ulSpeed_RIGHT = ulSpeed;
             break;
         }
 
@@ -444,6 +462,49 @@ DriveRun(unsigned long ulDirection, unsigned long ulSpeed)
         {
             g_sMotorDrives[MOTOR_DRIVE_LEFT].bReverse = 1;
             g_sMotorDrives[MOTOR_DRIVE_RIGHT].bReverse = 1;
+
+            ulSpeed_LEFT = ulSpeed;
+            ulSpeed_RIGHT = ulSpeed;
+            break;
+        }
+
+        case MOTOR_DRIVE_FORWARD_LEFT:
+        {
+            g_sMotorDrives[MOTOR_DRIVE_LEFT].bReverse = 0;
+            g_sMotorDrives[MOTOR_DRIVE_RIGHT].bReverse = 0;
+
+            ulSpeed_LEFT = ulSpeed/TURN_FACTOR;
+            ulSpeed_RIGHT = ulSpeed;
+            break;
+        }
+
+        case MOTOR_DRIVE_FORWARD_RIGHT:
+        {
+            g_sMotorDrives[MOTOR_DRIVE_LEFT].bReverse = 0;
+            g_sMotorDrives[MOTOR_DRIVE_RIGHT].bReverse = 0;
+
+            ulSpeed_LEFT = ulSpeed;
+            ulSpeed_RIGHT = ulSpeed/TURN_FACTOR;
+            break;
+        }
+
+        case MOTOR_DRIVE_REVERSE_LEFT:
+        {
+            g_sMotorDrives[MOTOR_DRIVE_LEFT].bReverse = 1;
+            g_sMotorDrives[MOTOR_DRIVE_RIGHT].bReverse = 1;
+
+            ulSpeed_LEFT = ulSpeed/TURN_FACTOR;
+            ulSpeed_RIGHT = ulSpeed;
+            break;
+        }
+
+        case MOTOR_DRIVE_REVERSE_RIGHT:
+        {
+            g_sMotorDrives[MOTOR_DRIVE_LEFT].bReverse = 1;
+            g_sMotorDrives[MOTOR_DRIVE_RIGHT].bReverse = 1;
+
+            ulSpeed_LEFT = ulSpeed;
+            ulSpeed_RIGHT = ulSpeed/TURN_FACTOR;
             break;
         }
 
@@ -458,10 +519,10 @@ DriveRun(unsigned long ulDirection, unsigned long ulSpeed)
     }
 
     //
-    // Set the target motor speed
+    // Set the target motor speed - JA - moved to switch statement above, to allow different speeds depending on state.
     //
-    g_sMotorDrives[MOTOR_DRIVE_LEFT].lTargetSpeed = ulSpeed;
-    g_sMotorDrives[MOTOR_DRIVE_RIGHT].lTargetSpeed = ulSpeed;
+    g_sMotorDrives[MOTOR_DRIVE_LEFT].lTargetSpeed = ulSpeed_LEFT;
+    g_sMotorDrives[MOTOR_DRIVE_RIGHT].lTargetSpeed = ulSpeed_RIGHT;
 
     //
     // Set each motor to forward or reverse as needed
@@ -476,10 +537,10 @@ DriveRun(unsigned long ulDirection, unsigned long ulSpeed)
     // as the request RPM.  This just takes advantage of a coincidence that
     // PWM duty cycle = RPM (approx).  Enable the motor to start running.
     //
-    g_sMotorDrives[MOTOR_DRIVE_LEFT].lDuty = ulSpeed << 16;
-    g_sMotorDrives[MOTOR_DRIVE_RIGHT].lDuty = ulSpeed << 16;
-    MotorSpeed(LEFT_SIDE, (unsigned short)(ulSpeed << 8));
-    MotorSpeed(RIGHT_SIDE, (unsigned short)(ulSpeed << 8));
+    g_sMotorDrives[MOTOR_DRIVE_LEFT].lDuty = ulSpeed_LEFT << 16;
+    g_sMotorDrives[MOTOR_DRIVE_RIGHT].lDuty = ulSpeed_RIGHT << 16;
+    MotorSpeed(LEFT_SIDE, (unsigned short)(ulSpeed_LEFT << 8));
+    MotorSpeed(RIGHT_SIDE, (unsigned short)(ulSpeed_RIGHT << 8));
     MotorRun(LEFT_SIDE);
     MotorRun(RIGHT_SIDE);
 
@@ -491,8 +552,8 @@ DriveRun(unsigned long ulDirection, unsigned long ulSpeed)
     //
     g_sMotorDrives[LEFT_SIDE].bRunning = 0;
     g_sMotorDrives[RIGHT_SIDE].bRunning = 0;
-    g_sMotorDrives[LEFT_SIDE].lActualSpeed = ulSpeed;
-    g_sMotorDrives[RIGHT_SIDE].lActualSpeed = ulSpeed;
+    g_sMotorDrives[LEFT_SIDE].lActualSpeed = ulSpeed_LEFT;
+    g_sMotorDrives[RIGHT_SIDE].lActualSpeed = ulSpeed_RIGHT;
 
     //
     // Since we (maybe) changed the speed, reset the PID controller
